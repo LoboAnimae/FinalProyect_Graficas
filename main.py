@@ -61,7 +61,7 @@ def main():
 
   while Game.isRunning:
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    glClearColor(6, 0.58, 0.58, 1.0)
+    glClearColor(1, 1, 1, 1.0)
 
     glUseProgram(pgInformation.shaders)
 
