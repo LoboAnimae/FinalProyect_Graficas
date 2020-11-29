@@ -1,65 +1,132 @@
-VERSION_NUMBER = 450
-
-GL_PY_VERTEX_SHADER = """
-#version %s
-
-layout (location = 0) in vec3 GL_INPUT_POSITION;
-layout (location = 1) in vec3 GL_INPUT_NORMAL;
-layout (location = 2) in vec2 GL_INPUT_TEXTURE_COORDS;
-
-uniform mat4 GL_INPUT_UNIFORM_MATRIX;
-uniform vec3 GL_INPUT_UNIFORM_LIGHT;
-uniform float GL_INPUT_UNIFORM_TIME;
-
-out float GL_INTENSITY_FLOAT;
-out vec2 GL_VERTEX_TEXTURE_COORDS;
-out vec3 GL_POSITION_VECTOR;
-out vec3 GL_NORMAL_VECTOR;
-out float GL_TIMER_FLOAT;
-
+GL_VERTEX_NATIVE_SHADER = """
+#version 460
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec2 texcoords;
+uniform mat4 theMatrix;
+uniform vec3 GL_LIGHT_USAGE;
+uniform float time;
+out float intensity;
+out vec2 vertexTexcoords;
+out vec3 v3Position;
+out vec3 fnormal;
+out float timer;
 void main()
 {
-	GL_NORMAL_VECTOR = GL_INPUT_NORMAL;
-	GL_VERTEX_TEXTURE_COORDS = GL_INPUT_TEXTURE_COORDS;
-	GL_POSITION_VECTOR = GL_INPUT_POSITION;
-	GL_TIMER_FLOAT = GL_INPUT_UNIFORM_TIME;
-	GL_INTENSITY_FLOAT = dot(GL_INPUT_NORMAL, normalize(GL_INPUT_UNIFORM_LIGHT));
-	GL_POSITION_VECTOR = GL_INPUT_UNIFORM_MATRIX * vec4(GL_INPUT_POSITION.x, GL_INPUT_POSITION.y, GL_INPUT_POSITION.z, 1.0);
+	fnormal = normal;
+	vertexTexcoords = texcoords;
+	v3Position = position;
+	timer = time;
+	intensity = dot(normal, normalize(GL_LIGHT_USAGE));
+	gl_Position = theMatrix * vec4(position.x, position.y, position.z, 1.0);
 }
-""" % VERSION_NUMBER
+"""
 
-GL_PY_FRAGMENT_SHADER = """
-#version %s
+GL_VERTEX_NATIVE_FRAGMENT = """
+#version 460
+layout(location = 0) out vec4 fragColor;
+in float intensity;
+in vec2 vertexTexcoords;
+uniform sampler2D tex;
+uniform vec4 GL_DIFFUSE_USAGE;
+uniform vec4 GL_AMBIENT;
+void main()
+{
+	fragColor = texture(tex, vertexTexcoords);
+}
+"""
 
-layout(location = 0) out vec4 GL_COLOR_FRAGGING_COLOR;
+#Lineas verticales que lo atraviezan
+GL_SCANNER_FIRST_HALO = """
+#version 460
+layout(location = 0) out vec4 fragColor;
+in float intensity;
+in vec2 vertexTexcoords;
+in vec3 v3Position;
+in float timer;
+uniform sampler2D tex;
+uniform vec4 GL_DIFFUSE_USAGE;
+uniform vec4 GL_AMBIENT;
+void main()
+{
+	float time = timer/0.2;
+	float bright =  floor(mod(v3Position.x+timer, time)*2.5) + floor(mod(v3Position.z*5.0, 1.0));
+  vec4 color = mod(bright, 2.0) > .5 ? vec4(2.0, .0, 0.0, 1.0) : vec4(0.0, 3.0, 1.0, 1.0);
+  fragColor = color * intensity;
+}
+"""
 
-in float GL_INTENSITY_FLOAT;
-in vec2 GL_VERTEX_TEXTURE_COORDS;
+#este se miraba mas chilero en el mono 
+#este cambia de azul a amarillo 
+GL_SCANNER = """
+#version 460
+layout(location = 0) out vec4 fragColor;
+in float intensity;
+in vec2 vertexTexcoords;
+in vec3 v3Position;
+in float timer;
+uniform sampler2D tex;
+uniform vec4 GL_DIFFUSE_USAGE;
+uniform vec4 GL_AMBIENT;
+void main()
+{
+	float time = timer/0.3f;
+	if (time > 1.0 ) 
+	{
+		time = time * 2.0f;
+	}
+	else if (timer > 10) 
+	{
+		time = time / 100.0f;
+	}
+	else 
+	{
+		time = timer /2.2f;
+	}
 
-uniform sampler2D GL_SAMPLER_2_D_TEXTURE;
-uniform vec4 GL_DIFFUSE;
+	float bright = floor(mod(v3Position.z*time, 1.0)+timer);
+  vec4 color = mod(bright, 2.0) > .8 ? vec4(1.0, 3.0, 1.0, .5) : vec4(1.0, 1.0, 1.0, 1.0);
+  fragColor = color * intensity;
+}
+"""
+
+GL_PARTAY = """
+#version 460
+layout (location = 0) out vec4 fragColor;
+
+in float intensity;
+in vec2 vertexTexcoords;
+in vec3 v3Position;
+in float timer;
+
+uniform sampler2D tex;
+uniform vec4 GL_DIFFUSE_USAGE;
 uniform vec4 GL_AMBIENT;
 
 void main()
 {
-	GL_COLOR_FRAGGING_COLOR = texture(GL_SAMPLER_2_D_TEXTURE, GL_VERTEX_TEXTURE_COORDS);
+	float given_time = timer/0.2;
+	float red = mod(timer * 128, 10);
+	float blue = mod(timer * 35, 10);
+	float green = mod(timer * 515, 10);
+	float bright = floor(mod(v3Position.z * given_time, 1.0) + timer);
+	vec4 color = mod(bright, 3.0) > 1 ? vec4(red, blue, green, 1.0) : vec4(blue, green, red, 1.0);
+	fragColor = color * intensity;
 }
-""" % VERSION_NUMBER
+"""
 
-GL_DEFAULT_SHADER = """
-#version %s
-layout(location = 0) out vec4 GL_COLOR_FRAGGING_COLOR;
 
-in float GL_INTENSITY_FLOAT;
-in vec2 GL_VERTEX_TEXTURE_COORDS;
-in vec3 GL_NORMAL_VECTOR;
-
-uniform sampler2D GL_SAMPLER_2_D_TEXTURE;
-uniform vec4 GL_DIFFUSE;
+GL_NORMALS = """
+#version 460
+layout(location = 0) out vec4 fragColor;
+in float intensity;
+in vec2 vertexTexcoords;
+in vec3 fnormal;
+uniform sampler2D tex;
+uniform vec4 GL_DIFFUSE_USAGE;
 uniform vec4 GL_AMBIENT;
-
 void main()
 {
-	GL_COLOR_FRAGGING_COLOR = vec4(GL_NORMAL_VECTOR, 1.1);
+	fragColor = vec4(fnormal, 1.1);
 }
-""" % VERSION_NUMBER
+"""
